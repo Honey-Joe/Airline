@@ -52,12 +52,12 @@ const MyBookings = () => {
           .filter((booking) => booking.status === activeTab)
           .map((booking) => (
             <div key={booking._id} className="p-4 border rounded-lg shadow-md bg-white">
-              <h3 className="text-lg font-bold">{booking.flight.airline} - {booking.flight.flightNumber}</h3>
+              <h3 className="text-lg font-bold">{booking.flight?.airline} - {booking.flight?.flightNumber}</h3>
               <p className="text-gray-600">
-                From: {booking.flight.departure} → To: {booking.flight.destination}
+                From: {booking.flight?.departure} → To: {booking.flight?.destination}
               </p>
-              <p className="text-gray-600">Departure: {new Date(booking.flight.departureTime).toLocaleString()}</p>
-              <p className="text-gray-600">Arrival: {new Date(booking.flight.arrivalTime).toLocaleString()}</p>
+              <p className="text-gray-600">Departure: {new Date(booking.flight?.departureTime).toLocaleString()}</p>
+              <p className="text-gray-600">Arrival: {new Date(booking.flight?.arrivalTime).toLocaleString()}</p>
               <p className="text-gray-600">Class: {booking.classType}</p>
               <p className="text-gray-600 flex gap-3">Passengers: {booking.passengers.map((e)=>{
                 return(
