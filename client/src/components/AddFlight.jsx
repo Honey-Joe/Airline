@@ -22,7 +22,17 @@ const AddFlight = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem("token"); // Assuming token is stored
-      await axios.post("http://localhost:5000/api/flights", flightData, {
+
+      // Generate seats array dynamically
+      const seats = Array.from({ length: Number(flightData.totalSeats) }, (_, i) => ({
+        seatNumber: `S${i + 1}`,
+        isBooked: false,
+      }));
+
+      const payload = { ...flightData, seats };
+      delete payload.totalSeats; // Remove totalSeats as it's not in the schema
+
+      await axios.post("http://localhost:5000/api/flights", payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
