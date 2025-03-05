@@ -3,14 +3,10 @@ const Flight = require("../models/Flight");
 // ✅ Add a New Flight
 exports.addFlight = async (req, res) => {
   try {
-    const { airline, flightNumber, departure, arrival, departureTime, arrivalTime, price, totalSeats } = req.body;
+    const { airline, flightNumber, departure, arrival, departureTime, arrivalTime, price, totalSeats,seats } = req.body;
 
     // Generate seat numbers dynamically
-    const seats = Array.from({ length: totalSeats }, (_, i) => ({
-      seatNumber: `S${i + 1}`, // Seat format: S1, S2, S3...
-      isBooked: false,
-    }));
-
+   
     const newFlight = new Flight({
       airline,
       flightNumber,
@@ -19,6 +15,7 @@ exports.addFlight = async (req, res) => {
       departureTime,
       arrivalTime,
       price,
+      totalSeats,
       seats,
     });
 
@@ -26,6 +23,7 @@ exports.addFlight = async (req, res) => {
     res.status(201).json({ message: "Flight added successfully", flight: newFlight });
   } catch (error) {
     res.status(500).json({ message: "Error adding flight", error });
+    console.log(error)
   }
 };
 

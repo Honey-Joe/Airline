@@ -83,20 +83,20 @@ const Flights = () => {
               <p className="text-gray-700"><strong>Departure:</strong> {new Date(flight.departureTime).toLocaleString()}</p>
               <p className="text-gray-700"><strong>Arrival:</strong> {new Date(flight.arrivalTime).toLocaleString()}</p>
               <p className="text-gray-700"><strong>Price:</strong> ${flight.price}</p>
-              <p className={`text-gray-700 font-semibold ${flight.seats.length > 0 ? "text-green-600" : "text-red-500"}`}>
-                <strong>Seats Available:</strong> {flight.seats.length}
+              <p className={`text-gray-700 font-semibold ${flight.seats.filter(seats => !seats.isBooked ).length > 0 ? "text-green-600" : "text-red-500"}`}>
+                <strong>Seats Available:</strong> {flight.seats.filter(seats => !seats.isBooked ).length}
               </p>
               
               <button 
                 className={`mt-4 w-full py-2 rounded-lg text-white transition-all ${
-                  flight.seatsAvailable > 0 
+                  flight.seats.filter(seats => !seats.isBooked ).length > 0 
                     ? "bg-green-600 hover:bg-green-700" 
                     : "bg-gray-400 cursor-not-allowed"
                 }`}
-                disabled={flight.seats.length === 0}
+                disabled={flight.seats.filter(seats => !seats.isBooked ).length === 0}
                 onClick={() => handleBookNow(flight._id)}
               >
-                {flight.seats.length > 0 ? "Book Now" : "Sold Out"}
+                {flight.seats.filter(seats => !seats.isBooked ).length > 0 ? "Book Now" : "Sold Out"}
               </button>
             </div>
           ))}

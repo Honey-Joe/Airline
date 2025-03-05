@@ -17,26 +17,34 @@ const AddFlight = () => {
   const handleChange = (e) => {
     setFlightData({ ...flightData, [e.target.name]: e.target.value });
   };
+  const generateSeats = (flightNumber, totalSeats) => {
+    const seatsArray = [];
+    for (let i = 1; i <= totalSeats; i++) {
+      seatsArray.push({ seatNumber: `${flightNumber.toUpperCase()}-S${i}`, isBooked: false });
+    }
+    return seatsArray;
+  };
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem("token"); // Assuming token is stored
+      const token = localStorage.getItem("token");
 
-      // Generate seats array dynamically
-      const seats = Array.from({ length: Number(flightData.totalSeats) }, (_, i) => ({
-        seatNumber: `S${i + 1}`,
-        isBooked: false,
-      }));
+      const seats = generateSeats(flightData.flightNumber, Number(flightData.totalSeats));
 
-      const payload = { ...flightData, seats };
-      delete payload.totalSeats; // Remove totalSeats as it's not in the schema
+      const flightPayload = {
+        ...flightData,
+        totalSeats: Number(flightData.totalSeats),
+        price: Number(flightData.price),
+        seats, // ✅ Send generated seats
+      };
 
-      await axios.post("http://localhost:5000/api/flights", payload, {
+      const res = await axios.post("http://localhost:5000/api/flights", flightPayload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      toast.success("Flight added successfully!");
+      toast.success(res.data.message || "Flight added successfully!");
       setFlightData({
         airline: "",
         flightNumber: "",
