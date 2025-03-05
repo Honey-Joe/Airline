@@ -1,69 +1,68 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import axios from "axios";
+import { toast } from "react-toastify";
 
-const UpdateFlight = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [flight, setFlight] = useState({
+const UpdateFlight = ({ flightId, onClose }) => {
+  const [flightData, setFlightData] = useState({
     airline: "",
     flightNumber: "",
     departure: "",
-    destination: "",
+    arrival: "",
     departureTime: "",
     arrivalTime: "",
     price: "",
-    seatsAvailable: "",
+    totalSeats: "",
   });
 
   useEffect(() => {
-    const fetchFlight = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(`http://localhost:5000/api/flights/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setFlight(response.data);
-      } catch (error) {
-        console.error("Error fetching flight details:", error);
-      }
-    };
+    fetchFlightDetails();
+  }, []);
 
-    fetchFlight();
-  }, [id]);
-
-  const handleChange = (e) => {
-    setFlight({ ...flight, [e.target.name]: e.target.value });
+  const fetchFlightDetails = async () => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/flights/${flightId}`);
+      setFlightData(response.data);
+    } catch (error) {
+      toast.error("Error fetching flight details");
+    }
   };
 
-  const handleSubmit = async (e) => {
+  const handleChange = (e) => {
+    setFlightData({ ...flightData, [e.target.name]: e.target.value });
+  };
+
+  const handleUpdate = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem("token");
-      await axios.put(`http://localhost:5000/api/flights/${id}`, flight, {
+      await axios.put(`http://localhost:5000/api/flights/${flightId}`, flightData, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      alert("Flight updated successfully!");
-      navigate("/admin-dashboard");
+
+      toast.success("Flight updated successfully!");
+      onClose(); // Close modal or refresh list
     } catch (error) {
-      console.error("Error updating flight:", error);
+      toast.error("Error updating flight");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-6 rounded-lg shadow-md w-96">
-        <h2 className="text-2xl font-semibold mb-4 text-gray-800">Update Flight</h2>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <input type="text" name="airline" value={flight.airline} onChange={handleChange} className="input-field" placeholder="Airline Name" required />
-          <input type="text" name="flightNumber" value={flight.flightNumber} onChange={handleChange} className="input-field" placeholder="Flight Number" required />
-          <input type="text" name="departure" value={flight.departure} onChange={handleChange} className="input-field" placeholder="Departure" required />
-          <input type="text" name="destination" value={flight.destination} onChange={handleChange} className="input-field" placeholder="Destination" required />
-          <input type="datetime-local" name="departureTime" value={flight.departureTime} onChange={handleChange} className="input-field" required />
-          <input type="datetime-local" name="arrivalTime" value={flight.arrivalTime} onChange={handleChange} className="input-field" required />
-          <input type="number" name="price" value={flight.price} onChange={handleChange} className="input-field" placeholder="Price" required />
-          <input type="number" name="seatsAvailable" value={flight.seatsAvailable} onChange={handleChange} className="input-field" placeholder="Seats Available" required />
-          <button type="submit" className="w-full bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">Update Flight</button>
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center">
+      <div className="bg-white p-6 rounded-md shadow-md w-96">
+        <h2 className="text-xl font-semibold mb-4">Update Flight</h2>
+        <form onSubmit={handleUpdate} className="space-y-4">
+          <input type="text" name="airline" value={flightData.airline} onChange={handleChange} className="w-full p-2 border rounded" required />
+          <input type="text" name="flightNumber" value={flightData.flightNumber} onChange={handleChange} className="w-full p-2 border rounded" required />
+          <input type="text" name="departure" value={flightData.departure} onChange={handleChange} className="w-full p-2 border rounded" required />
+          <input type="text" name="arrival" value={flightData.arrival} onChange={handleChange} className="w-full p-2 border rounded" required />
+          <input type="datetime-local" name="departureTime" value={flightData.departureTime} onChange={handleChange} className="w-full p-2 border rounded" required />
+          <input type="datetime-local" name="arrivalTime" value={flightData.arrivalTime} onChange={handleChange} className="w-full p-2 border rounded" required />
+          <input type="number" name="price" value={flightData.price} onChange={handleChange} className="w-full p-2 border rounded" required />
+          <input type="number" name="totalSeats" value={flightData.totalSeats} onChange={handleChange} className="w-full p-2 border rounded" required />
+          <div className="flex justify-between">
+            <button type="submit" className="bg-blue-500 text-white py-2 px-4 rounded">Update</button>
+            <button type="button" className="bg-red-500 text-white py-2 px-4 rounded" onClick={onClose}>Cancel</button>
+          </div>
         </form>
       </div>
     </div>

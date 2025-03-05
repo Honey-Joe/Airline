@@ -1,57 +1,103 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import axios from "axios";
+import { useParams } from "react-router-dom";
 
 const BookingForm = () => {
-  const { flightId } = useParams();
-  const navigate = useNavigate();
-  
-  const [passengers, setPassengers] = useState([{ name: "", age: "", gender: "" }]);
+  const flight = useParams();
+  const flightId = flight.flightId
+  const [passengers, setPassengers] = useState([
+    { name: "", age: "", gender: "Male" },
+  ]);
   const [classType, setClassType] = useState("Economy");
+  const [availableSeats, setAvailableSeats] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
+  // ✅ Fetch Available Seats
+  useEffect(() => {
+    const fetchSeats = async () => {
+      try {
+        const response = await axios.get(
+          `http://localhost:5000/api/flights/seats/${flightId}`
+        );
+        setAvailableSeats(response.data.availableSeats.map(seat => seat.seatNumber));
+      } catch (err) {
+        console.error("Error fetching seats:", err);
+      }
+    };
+    fetchSeats();
+  }, [flightId]);
+
+  // ✅ Handle Passenger Input Change
   const handlePassengerChange = (index, field, value) => {
     const updatedPassengers = [...passengers];
     updatedPassengers[index][field] = value;
     setPassengers(updatedPassengers);
   };
 
+  // ✅ Add New Passenger
   const addPassenger = () => {
-    setPassengers([...passengers, { name: "", age: "", gender: "" }]);
+    if (passengers.length < availableSeats.length) {
+      setPassengers([...passengers, { name: "", age: "", gender: "Male" }]);
+    } else {
+      setError("No more available seats.");
+    }
   };
 
+  // ✅ Remove Passenger
+  const removePassenger = (index) => {
+    const updatedPassengers = passengers.filter((_, i) => i !== index);
+    setPassengers(updatedPassengers);
+  };
+
+  // ✅ Handle Form Submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (passengers.some(p => !p.name || !p.age)) {
+      setError("Please fill in all passenger details.");
+      return;
+    }
+
+    setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.post(
+      const response = await axios.post(
         "http://localhost:5000/api/bookings",
         { flightId, passengers, classType },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("Booking Successful!");
-      navigate("/my-bookings");
+
+      setSuccess("Booking successful!");
+      setPassengers([{ name: "", age: "", gender: "Male" }]); // Reset form
     } catch (err) {
-      setError("Booking failed, please try again.");
-      console.log(err)
+      console.error("Booking error:", err);
+      setError(err.response?.data?.message || "Booking failed.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto mt-10 bg-white p-6 shadow-lg rounded-lg">
-      <h2 className="text-2xl font-bold mb-4">Book Your Flight</h2>
+    <div className="max-w-xl mx-auto bg-white p-6 rounded-lg shadow-md">
+      <h2 className="text-xl font-bold text-center mb-4">Book Your Flight</h2>
 
-      {error && <p className="text-red-500">{error}</p>}
+      {error && <p className="text-red-500 text-center">{error}</p>}
+      {success && <p className="text-green-500 text-center">{success}</p>}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {passengers.map((passenger, index) => (
-          <div key={index} className="flex flex-col md:flex-row gap-4">
+          <div key={index} className="border p-3 rounded-md relative">
+            <h3 className="font-semibold mb-2">Passenger {index + 1}</h3>
             <input
               type="text"
-              placeholder="Passenger Name"
+              placeholder="Name"
               value={passenger.name}
               onChange={(e) => handlePassengerChange(index, "name", e.target.value)}
-              className="w-full p-2 border rounded"
+              className="w-full p-2 border rounded-md mb-2"
               required
             />
             <input
@@ -59,42 +105,58 @@ const BookingForm = () => {
               placeholder="Age"
               value={passenger.age}
               onChange={(e) => handlePassengerChange(index, "age", e.target.value)}
-              className="w-full p-2 border rounded"
+              className="w-full p-2 border rounded-md mb-2"
               required
             />
             <select
               value={passenger.gender}
               onChange={(e) => handlePassengerChange(index, "gender", e.target.value)}
-              className="w-full p-2 border rounded"
-              required
+              className="w-full p-2 border rounded-md mb-2"
             >
-              <option value="">Select Gender</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
               <option value="Other">Other</option>
             </select>
+
+            {index > 0 && (
+              <button
+                type="button"
+                onClick={() => removePassenger(index)}
+                className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+              >
+                ❌
+              </button>
+            )}
           </div>
         ))}
 
-        <button type="button" onClick={addPassenger} className="bg-green-500 text-white px-4 py-2 rounded">
-          + Add Passenger
+        <button
+          type="button"
+          onClick={addPassenger}
+          className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600"
+        >
+          Add Passenger
         </button>
 
-        <div className="mt-4">
-          <label className="block text-gray-700 font-bold">Select Class Type:</label>
-          <select
-            value={classType}
-            onChange={(e) => setClassType(e.target.value)}
-            className="w-full p-2 border rounded mt-1"
-            required
-          >
-            <option value="Economy">Economy</option>
-            <option value="Business">Business</option>
-          </select>
-        </div>
+        <label className="block font-semibold mt-4">Class Type</label>
+        <select
+          value={classType}
+          onChange={(e) => setClassType(e.target.value)}
+          className="w-full p-2 border rounded-md"
+        >
+          <option value="Economy">Economy</option>
+          <option value="Business">Business</option>
+          <option value="First Class">First Class</option>
+        </select>
 
-        <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
-          Confirm Booking
+        <button
+          type="submit"
+          disabled={loading}
+          className={`w-full text-white py-2 rounded-md ${
+            loading ? "bg-gray-400" : "bg-green-500 hover:bg-green-600"
+          }`}
+        >
+          {loading ? "Booking..." : "Book Now"}
         </button>
       </form>
     </div>

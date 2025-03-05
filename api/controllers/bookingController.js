@@ -1,7 +1,21 @@
 const Booking = require("../models/Booking");
 const Flight = require("../models/Flight");
 
-// Book a Ticket
+// ✅ Fetch Available Seats for a Flight
+exports.getAvailableSeats = async (req, res) => {
+  try {
+    const { flightId } = req.params;
+    const flight = await Flight.findById(flightId);
+    if (!flight) return res.status(404).json({ message: "Flight not found" });
+
+    const availableSeats = flight.seats.filter(seat => !seat.isBooked);
+    res.status(200).json({ availableSeats });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching available seats", error });
+  }
+};
+
+// ✅ Book a Ticket with Seat Selection
 exports.bookTicket = async (req, res) => {
   try {
     const { flightId, passengers, classType } = req.body;
@@ -11,29 +25,40 @@ exports.bookTicket = async (req, res) => {
     const flight = await Flight.findById(flightId);
     if (!flight) return res.status(404).json({ message: "Flight not found" });
 
-    // Calculate Total Price (Example: Business Class 1.5x, Economy 1x)
+    // Get available seats
+    let availableSeats = flight.seats.filter(seat => !seat.isBooked).map(seat => seat.seatNumber);
+
+    if (availableSeats.length < passengers.length) {
+      return res.status(400).json({ message: "Not enough available seats" });
+    }
+
+    // Assign seats to passengers
+    let assignedPassengers = passengers.map((p, index) => ({
+      ...p,
+      seat: availableSeats[index] // Assign first available seat
+    }));
+
+    // Mark seats as booked
+    assignedPassengers.forEach(passenger => {
+      const seatIndex = flight.seats.findIndex(seat => seat.seatNumber === passenger.seat);
+      flight.seats[seatIndex].isBooked = true;
+    });
+
+    // Calculate total price (Business Class = 1.5x price)
     let totalPrice = flight.price * passengers.length;
     if (classType === "Business") totalPrice *= 1.5;
 
-    // Check Seat Availability
-    if (flight.seatsAvailable < passengers.length) {
-      return res.status(400).json({ message: "Not enough seats available" });
-    }
-
-    // Create Booking
+    // Create booking
     const newBooking = new Booking({
       user: userId,
       flight: flightId,
-      passengers,
+      passengers: assignedPassengers,
       totalPrice,
       classType,
       status: "confirmed",
     });
 
     await newBooking.save();
-
-    // Update Available Seats in Flight
-    flight.seatsAvailable -= passengers.length;
     await flight.save();
 
     res.status(201).json({ message: "Booking successful", booking: newBooking });
@@ -42,17 +67,17 @@ exports.bookTicket = async (req, res) => {
   }
 };
 
-// Get Bookings for Logged-in User
+// ✅ Get All Bookings for Logged-in User
 exports.getUserBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({ user: req.user.id }).populate("flight");
     res.status(200).json(bookings);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching bookings", error });
+    res.status(500).json({ message: "Error fetching user bookings", error });
   }
 };
 
-// Get All Bookings (Admin Only)
+// ✅ Get All Bookings (Admin Only)
 exports.getAllBookings = async (req, res) => {
   try {
     const bookings = await Booking.find().populate("user flight");
@@ -62,7 +87,7 @@ exports.getAllBookings = async (req, res) => {
   }
 };
 
-// Get Bookings for a Specific Flight
+// ✅ Get All Bookings for a Specific Flight
 exports.getFlightBookings = async (req, res) => {
   try {
     const { flightId } = req.params;
@@ -73,23 +98,28 @@ exports.getFlightBookings = async (req, res) => {
   }
 };
 
-// Cancel Booking (User)
+// ✅ Cancel a Booking & Release Seats
 exports.cancelBooking = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Find Booking
+    // Find booking
     const booking = await Booking.findById(id);
     if (!booking) return res.status(404).json({ message: "Booking not found" });
 
-    // Find Flight and Restore Seats
+    // Find flight and restore seats
     const flight = await Flight.findById(booking.flight);
     if (flight) {
-      flight.seatsAvailable += booking.passengers.length;
+      booking.passengers.forEach(passenger => {
+        const seatIndex = flight.seats.findIndex(seat => seat.seatNumber === passenger.seat);
+        if (seatIndex !== -1) {
+          flight.seats[seatIndex].isBooked = false; // Release seat
+        }
+      });
       await flight.save();
     }
 
-    // Update Booking Status to "Cancelled"
+    // Update booking status
     booking.status = "cancelled";
     await booking.save();
 

@@ -1,12 +1,22 @@
 const express = require("express");
-const { addFlight, getFlights, getFlightById, updateFlight, deleteFlight } = require("../controllers/flightController");
+const router = express.Router();
+const {
+  addFlight,
+  getFlights,
+  getFlightById,
+  updateFlight,
+  deleteFlight,
+  getAvailableSeats,
+} = require("../controllers/flightController");
 const { authMiddleware, adminMiddleware } = require("../middleware/authMiddleware");
 
-const router = express.Router();
-
-router.post("/", authMiddleware, adminMiddleware, addFlight);
+// ✅ Public Routes
 router.get("/", getFlights);
-router.get("/:id", authMiddleware, getFlightById);
+router.get("/:id", getFlightById);
+router.get("/seats/:flightId", getAvailableSeats);
+
+// ✅ Admin Routes
+router.post("/", authMiddleware, adminMiddleware, addFlight);
 router.put("/:id", authMiddleware, adminMiddleware, updateFlight);
 router.delete("/:id", authMiddleware, adminMiddleware, deleteFlight);
 
